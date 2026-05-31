@@ -1,23 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
 using Model.Core;
 
 namespace ComputerGames
 {
-  /// <summary>
-  /// Логика взаимодействия для CatalogWindow.xaml
-  /// </summary>
   public partial class CatalogWindow : Window
   {
     private GameCatalog catalog;
@@ -33,28 +20,38 @@ namespace ComputerGames
     {
       if (string.IsNullOrWhiteSpace(newGameTitle.Text))
       {
-        MessageBox.Show("Введите название игры", "Ошибка",
+        MessageBox.Show("Введите данные игры", "Ошибка",
                       MessageBoxButton.OK, MessageBoxImage.Warning);
         return;
       }
 
-      Game newGame;
-      string[] listText = newGameTitle.Text.Split(", ");
+      // Получаем выбранный тип игры
+      string gameType = ((ComboBoxItem)gameTypeCombo.SelectedItem).Content.ToString();
+
+      Game newGame = null;
+      string[] listText = newGameTitle.Text.Split(',');
 
       try
       {
-        string gameType = listText[0].ToLower();
-        string title = listText[0];
-        string genre = listText[1];
-        int age = int.Parse(listText[2]);
-        double rating = double.Parse(listText[3].Replace('.', ','));
+        // Очищаем строки от пробелов
+        for (int i = 0; i < listText.Length; i++)
+          listText[i] = listText[i].Trim();
 
-        // определяет тип игры
-        if (gameType.Contains("multi") || gameType.Contains("multiplayer"))
+        string title = listText[0];
+        string genre = listText.Length > 1 ? listText[1] : "Unknown";
+        int age = listText.Length > 2 ? int.Parse(listText[2]) : 0;
+        double rating = listText.Length > 3 ? double.Parse(listText[3].Replace('.', ',')) : 5.0;
+
+        // Создаём игру в зависимости от выбранного типа
+        if (gameType.Contains("SingleGame"))
+        {
+          newGame = new SingleGame(title, genre, age, DateTime.Now, rating);
+        }
+        else if (gameType.Contains("MultiplayerGame"))
         {
           newGame = new MultiplayerGame(title, genre, age, DateTime.Now, rating);
         }
-        else if (gameType.Contains("online") || gameType.Contains("onlinegame"))
+        else if (gameType.Contains("OnlineGame"))
         {
           newGame = new OnlineGame(title, genre, age, DateTime.Now, rating);
         }
@@ -63,23 +60,34 @@ namespace ComputerGames
           newGame = new SingleGame(title, genre, age, DateTime.Now, rating);
         }
       }
-      catch
+      catch (Exception ex)
       {
-        newGame = new SingleGame(
-            newGameTitle.Text,
-            "Unknown",
-            0,
-            DateTime.Now,
-            5.0
-        );
+        // Если парсинг не удался - создаём с значениями по умолчанию
+        string defaultTitle = newGameTitle.Text;
+
+        if (gameType.Contains("SingleGame"))
+        {
+          newGame = new SingleGame(defaultTitle, "Unknown", 0, DateTime.Now, 5.0);
+        }
+        else if (gameType.Contains("MultiplayerGame"))
+        {
+          newGame = new MultiplayerGame(defaultTitle, "Unknown", 0, DateTime.Now, 5.0);
+        }
+        else
+        {
+          newGame = new OnlineGame(defaultTitle, "Unknown", 0, DateTime.Now, 5.0);
+        }
       }
 
-      catalog.AddGame(newGame);
-      newGameTitle.Clear();
-      gamesGrid.Items.Refresh();
+      if (newGame != null)
+      {
+        catalog.AddGame(newGame);
+        newGameTitle.Clear();
+        gamesGrid.Items.Refresh();
 
-      MessageBox.Show("Игра добавлена", "Успех",
-                    MessageBoxButton.OK, MessageBoxImage.Information);
+        MessageBox.Show("Игра добавлена", "Успех",
+                      MessageBoxButton.OK, MessageBoxImage.Information);
+      }
     }
 
     private void RemoveGame_Click(object sender, RoutedEventArgs e)
@@ -99,9 +107,10 @@ namespace ComputerGames
                       MessageBoxButton.OK, MessageBoxImage.Warning);
       }
     }
-    private void CloseButton_Click(object sender, RoutedEventArgs e)
+
+    private void Close_Click(object sender, RoutedEventArgs e)
     {
-      this.Close();  // Закрывает ТОЛЬКО это окно
+      Close();
     }
   }
 }
